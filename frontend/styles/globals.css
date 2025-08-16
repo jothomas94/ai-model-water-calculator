@@ -1,9 +1,63 @@
+/* sanity: this should immediately turn the page dark even without Tailwind */
+html, body { background:#0b0d12; color:#e5e7eb; }
+a { color:#93c5fd; }
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Basic typography + layout defaults; dark-first look */
+html,
+body,
+#__next {
+  height: 100%;
+}
+
 body {
-  font-family: system-ui, sans-serif;
-  background-color: #1a1a1a;
-  color: #e5e7eb;
+  @apply bg-gray-900 text-gray-100; /* dark background/text */
+}
+
+/* Card-like container used in index.tsx */
+.container-card {
+  @apply bg-gray-800 text-gray-100 rounded-xl shadow-lg ring-1 ring-gray-700;
+}
+
+/* Inputs/buttons */
+.input {
+  @apply w-full rounded-md bg-gray-900 text-gray-100 placeholder-gray-400
+         ring-1 ring-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500
+         px-3 py-2;
+}
+
+.button {
+  @apply inline-flex items-center justify-center rounded-md px-4 py-2
+         bg-indigo-600 text-white font-medium hover:bg-indigo-500
+         focus:outline-none focus:ring-2 focus:ring-indigo-500;
+}
+
+.label {
+  @apply block text-sm font-medium text-gray-300;
+}
+
+.h1 {
+  @apply text-3xl font-extrabold tracking-tight text-white;
+}
+
+.h2 {
+  @apply text-xl font-bold text-gray-200;
+}
+
+.table {
+  @apply w-full text-left text-sm;
+}
+.table th {
+  @apply py-2 text-gray-300 font-semibold border-b border-gray-700;
+}
+.table td {
+  @apply py-2 text-gray-200 border-b border-gray-800;
+}
+
+/* Links */
+a {
+  @apply text-indigo-400 hover:text-indigo-300 underline;
 }
