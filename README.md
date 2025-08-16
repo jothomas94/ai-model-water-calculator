@@ -1,2 +1,46 @@
-# ai-model-water-calculator
-A project to calculate the water usage by different models in future
+# AI Model Water Usage Calculator
+
+A two-part project:
+- Backend: Flask API (Python) for prediction logic.
+- Frontend: Next.js (React + TypeScript + Tailwind) for the UI.
+
+## Prerequisites
+
+- Python 3.10+ (or compatible with your `requirements.txt`)
+- Node.js 18+ and npm
+- Git (optional, for cloning)
+
+## Backend Setup (Flask)
+From the project root:
+```bash
+cd backend
+```
+
+## Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+## Run the server:
+```bash
+python app.py     
+```
+The API will be available at: http://127.0.0.1:8000
+
+## Frontend Setup (Next.js)
+From the project root:
+```bash
+cd frontend
+```
+
+## Install dependencies:
+```bash
+npm install
+```
+
+## Start the dev server:
+```bash
+npm run dev
+```
+
+The app will be available at: http://localhost:3000
