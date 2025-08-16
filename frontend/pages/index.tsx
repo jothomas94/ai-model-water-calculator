@@ -1,172 +1,251 @@
 import { useState } from "react";
-import { fetchPrediction, PredictPayload } from "../lib/api";
+import { fetchPrediction } from "../lib/api";
+
+// Narrow local types: we ignore compute_index on purpose.
+type ModelRow = {
+  per_inference_water_ml: number;
+  compute_index?: number; // backend may send it; we just don't render it
+};
+
+type PredictResponse = {
+  year: number;
+  assumptions: Record<string, any>;
+  models: Record<string, ModelRow>;
+  sources?: Array<{ title: string; url: string }>;
+};
 
 export default function Home() {
-  const [year, setYear] = useState(2025);
-  const [demandGrowth, setDemandGrowth] = useState(0.2);
-  const [efficiencyImprove, setEfficiencyImprove] = useState(0.05);
-  const [tokenGrowth, setTokenGrowth] = useState(0.1);
-  const [computeDoubling, setComputeDoubling] = useState(2);
+  // Inputs (include computeDoublingYears so backend can still compute the index)
+  const [year, setYear] = useState<number>(2025);
+  const [demandGrowthCAGR, setDemandGrowthCAGR] = useState<number>(0.2);
+  const [wueEfficiencyImprove, setWueEfficiencyImprove] = useState<number>(0.05);
+  const [tokenGrowthCAGR, setTokenGrowthCAGR] = useState<number>(0.1);
+  const [computeDoublingYears, setComputeDoublingYears] = useState<number>(2);
 
-  const [models, setModels] = useState<any>(null);
-  const [sources, setSources] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  // Sample text water estimate
+  const [sampleText, setSampleText] = useState<string>("Hello World!");
+
+  // State
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<PredictResponse | null>(null);
+
+  // very rough token estimator (~1 token ≈ 4 chars)
+  const estimateTokens = (text: string) => {
+    const t = text.trim();
+    if (!t) return 0;
+    return Math.max(1, Math.ceil(t.length / 4));
+  };
+  const tokensForSample = estimateTokens(sampleText);
+  const fractionOf400 = tokensForSample / 400;
 
   const handlePredict = async () => {
+    setError(null);
     setLoading(true);
-    setError("");
+    setData(null);
+
+    if (!Number.isInteger(year) || year < 2025) {
+      setError("Year must be an integer ≥ 2025.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const payload: PredictPayload = {
+      const res = await fetchPrediction({
         year,
-        demand_growth_cagr: demandGrowth,
-        wue_efficiency_improve: efficiencyImprove,
-        token_growth_cagr: tokenGrowth,
-        compute_doubling_years: computeDoubling,
-      };
-      const data = await fetchPrediction(payload);
-      setModels(data.models);
-      setSources(data.sources);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch prediction");
+        demand_growth_cagr: demandGrowthCAGR,
+        wue_efficiency_improve: wueEfficiencyImprove,
+        token_growth_cagr: tokenGrowthCAGR,
+        // keep sending to backend; we won't display the resulting compute index
+        compute_doubling_years: computeDoublingYears as unknown as number, // tolerated by most fetchPrediction typings
+      } as any); // cast in case your lib/api types don't include compute_doubling_years
+      setData(res as PredictResponse);
+    } catch (e: any) {
+      setError(e?.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
   };
 
+  const models = data?.models ?? {};
+
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-200 p-8">
-      <h1 className="text-4xl font-bold mb-8 text-center text-white">
-        AI Model Water Usage Calculator
-      </h1>
-
-      {/* Input Card */}
-      <div className="max-w-3xl mx-auto bg-gray-800 rounded-xl shadow-lg p-8 mb-8">
-        <h2 className="text-2xl font-semibold mb-6 text-white">Parameters</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block mb-2 font-medium">Year (>=2025)</label>
-            <input
-              type="number"
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2 font-medium">
-              Demand Growth CAGR (e.g., 0.2 = 20%)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={demandGrowth}
-              onChange={(e) => setDemandGrowth(Number(e.target.value))}
-              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2 font-medium">
-              Efficiency Improvement (e.g., 0.05 = 5%)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={efficiencyImprove}
-              onChange={(e) => setEfficiencyImprove(Number(e.target.value))}
-              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2 font-medium">
-              Token Growth CAGR (e.g., 0.1 = 10%)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={tokenGrowth}
-              onChange={(e) => setTokenGrowth(Number(e.target.value))}
-              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2 font-medium">Compute Doubling Years</label>
-            <input
-              type="number"
-              step="0.1"
-              value={computeDoubling}
-              onChange={(e) => setComputeDoubling(Number(e.target.value))}
-              className="w-full p-2 rounded bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+    <div className="min-h-screen bg-gray-900 text-gray-100">
+      <header className="py-8">
+        <div className="mx-auto max-w-4xl px-4">
+          <h1 className="text-3xl font-extrabold tracking-tight text-white">
+            AI Model Water Usage Calculator
+          </h1>
         </div>
+      </header>
 
-        <button
-          onClick={handlePredict}
-          className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition"
-          disabled={loading}
-        >
-          {loading ? "Calculating..." : "Predict"}
-        </button>
+      <main className="mx-auto max-w-4xl px-4 pb-16 space-y-10">
+        {/* Parameters */}
+        <section className="rounded-xl bg-gray-800 ring-1 ring-gray-700 p-6">
+          <h2 className="text-2xl font-semibold mb-6 text-white">Parameters</h2>
 
-        {error && <p className="text-red-400 mt-3">{error}</p>}
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block mb-2 font-medium">Year (&gt;= 2025)</label>
+              <input
+                type="number"
+                className="w-full rounded-md bg-gray-900 text-gray-100 placeholder-gray-400 ring-1 ring-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 px-3 py-2"
+                value={year}
+                min={2025}
+                onChange={(e) => setYear(parseInt(e.target.value || "0", 10))}
+              />
+            </div>
 
-      {/* Results Card */}
-      {models && (
-        <div className="max-w-3xl mx-auto bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
+            <div>
+              <label className="block mb-2 font-medium">
+                Demand Growth CAGR (e.g., 0.2 = 20%)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                className="w-full rounded-md bg-gray-900 text-gray-100 placeholder-gray-400 ring-1 ring-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 px-3 py-2"
+                value={demandGrowthCAGR}
+                onChange={(e) => setDemandGrowthCAGR(parseFloat(e.target.value || "0"))}
+              />
+            </div>
+
+            <div>
+              <label className="block mb-2 font-medium">
+                Efficiency Improvement (e.g., 0.05 = 5%)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                className="w-full rounded-md bg-gray-900 text-gray-100 placeholder-gray-400 ring-1 ring-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 px-3 py-2"
+                value={wueEfficiencyImprove}
+                onChange={(e) => setWueEfficiencyImprove(parseFloat(e.target.value || "0"))}
+              />
+            </div>
+
+            <div>
+              <label className="block mb-2 font-medium">
+                Token Growth CAGR (e.g., 0.1 = 10%)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                className="w-full rounded-md bg-gray-900 text-gray-100 placeholder-gray-400 ring-1 ring-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 px-3 py-2"
+                value={tokenGrowthCAGR}
+                onChange={(e) => setTokenGrowthCAGR(parseFloat(e.target.value || "0"))}
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block mb-2 font-medium">Compute Doubling Years</label>
+              <input
+                type="number"
+                step="0.1"
+                className="w-full rounded-md bg-gray-900 text-gray-100 placeholder-gray-400 ring-1 ring-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 px-3 py-2"
+                value={computeDoublingYears}
+                onChange={(e) => setComputeDoublingYears(parseFloat(e.target.value || "0"))}
+              />
+            </div>
+          </div>
+
+          {/* Sample text */}
+          <div className="mt-6">
+            <label className="block mb-2 font-medium">Sample text</label>
+            <input
+              type="text"
+              value={sampleText}
+              onChange={(e) => setSampleText(e.target.value)}
+              className="w-full p-2 rounded bg-gray-900 text-gray-100 placeholder-gray-400 ring-1 ring-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder='Try "Hello World!"'
+            />
+            <p className="text-sm text-gray-400 mt-1">
+              ~{tokensForSample} tokens (approx), compared to baseline 400 tokens.
+            </p>
+          </div>
+
+          <div className="mt-6 flex items-center gap-3">
+            <button
+              className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-indigo-600 text-white font-medium hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60"
+              onClick={handlePredict}
+              disabled={loading}
+            >
+              {loading ? "Predicting..." : "Predict"}
+            </button>
+            {error && <p className="text-sm text-red-400">{error}</p>}
+          </div>
+        </section>
+
+        {/* Results (no compute index column) */}
+        <section className="rounded-xl bg-gray-800 ring-1 ring-gray-700 p-6">
           <h2 className="text-2xl font-semibold mb-4 text-white">
             Predicted Water Usage per Model
           </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr>
-                  <th className="border-b border-gray-600 px-4 py-2">Model</th>
-                  <th className="border-b border-gray-600 px-4 py-2">
-                    Water per ~400 tokens (mL)
-                  </th>
-                  <th className="border-b border-gray-600 px-4 py-2">Compute Index</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(models).map(([name, vals]: any) => (
-                  <tr key={name} className="hover:bg-gray-700">
-                    <td className="border-b border-gray-700 px-4 py-2">{name}</td>
-                    <td className="border-b border-gray-700 px-4 py-2">{vals.per_inference_water_ml}</td>
-                    <td className="border-b border-gray-700 px-4 py-2">{vals.compute_index}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
-      {/* Sources Card */}
-      {sources.length > 0 && (
-        <div className="max-w-3xl mx-auto bg-gray-800 rounded-xl shadow-lg p-6">
-          <h3 className="text-xl font-semibold mb-3 text-white">Sources</h3>
-          <ul className="list-disc pl-5 space-y-1">
-            {sources.map((s) => (
-              <li key={s.url}>
-                <a
-                  href={s.url}
-                  target="_blank"
-                  className="text-blue-400 hover:underline"
-                  rel="noreferrer"
-                >
-                  {s.title}
-                </a>
-              </li>
-            ))}
-          </ul>
+          {data ? (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr>
+                      <th className="py-2 text-gray-300 font-semibold border-b border-gray-700">
+                        Model
+                      </th>
+                      <th className="py-2 text-gray-300 font-semibold border-b border-gray-700">
+                        Water per ~400 tokens (mL)
+                      </th>
+                      <th className="py-2 text-gray-300 font-semibold border-b border-gray-700">
+                        For sample text (mL)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(models).map(([name, vals]) => {
+                      const per400 = vals.per_inference_water_ml;
+                      const sampleMl = Number.isFinite(per400)
+                        ? +(per400 * fractionOf400).toFixed(2)
+                        : 0;
+                      return (
+                        <tr key={name}>
+                          <td className="py-2 border-b border-gray-800">{name}</td>
+                          <td className="py-2 border-b border-gray-800">{per400}</td>
+                          <td className="py-2 border-b border-gray-800">{sampleMl}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {data.sources && data.sources.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="font-semibold text-gray-200 mb-2">Sources</h3>
+                  <ul className="list-disc list-inside space-y-1">
+                    {data.sources.map((s, i) => (
+                      <li key={i}>
+                        <a
+                          className="text-indigo-400 hover:text-indigo-300 underline"
+                          href={s.url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {s.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="text-gray-400">Run a prediction to see results.</p>
+          )}
+        </section>
+      </main>
+
+      <footer className="py-8">
+        <div className="mx-auto max-w-4xl px-4 text-sm text-gray-400">
+          &copy; {new Date().getFullYear()} AI Model Water Usage Calculator
         </div>
-      )}
+      </footer>
     </div>
   );
 }
