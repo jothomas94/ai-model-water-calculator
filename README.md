@@ -1,5 +1,10 @@
 # AI Model Water Usage Calculator
 
+https://ai-model-water-calculator.vercel.app/
+
+<img width="954" height="894" alt="image" src="https://github.com/user-attachments/assets/72904c16-aef9-42ce-91c3-3c46e5c5b749" />
+
+
 A two-part project:
 - Backend: Flask API (Python) for prediction logic.
 - Frontend: Next.js (React + TypeScript + Tailwind) for the UI.
