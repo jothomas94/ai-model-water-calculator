@@ -240,14 +240,13 @@ export default function Home() {
           )}
         </section>
       </main>
-
       <footer className="py-8">
         <div className="mx-auto max-w-4xl px-4 text-sm text-gray-400">
-          &copy; {new Date().getFullYear()} AI Model Water Usage Calculator · Built by{" "}
-          <span className="text-gray-300">Sonia Anne Abraham</span>
+          &copy; {new Date().getFullYear()} AI Model Water Usage Calculator
         </div>
       </footer>
     </div>
   );
 }
+
 
