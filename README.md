@@ -6,8 +6,8 @@ https://ai-model-water-calculator.vercel.app/
 
 
 A two-part project:
-- Backend: Flask API (Python) for prediction logic.
-- Frontend: Next.js (React + TypeScript + Tailwind) for the UI.
+- Backend: Flask API (Python) for prediction logic. (Hosted in Render)
+- Frontend: Next.js (React + TypeScript + Tailwind) for the UI. (Hosted in Vercel)
 
 ## Prerequisites
 
